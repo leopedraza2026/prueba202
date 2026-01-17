@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado - Sistema de Gestión (Auth Firebase)</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --accent-color: #f59e0b;
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --card-bg: #ffffff;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --warning-color: #d97706;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); min-height: 100vh; display: flex; flex-direction: column; }
+
+        .hidden { display: none !important; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.3s; font-size: 0.9rem; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--secondary-color); }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-warning { background-color: var(--accent-color); color: white; }
+        .btn-warning:hover { background-color: var(--warning-color); }
+        .w-100 { width: 100%; }
+        .mt-2 { margin-top: 1rem; }
+        .mb-2 { margin-bottom: 1rem; }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        
+        /* Botones de cantidad */
+        .qty-btn { 
+            width: 28px; height: 28px; border-radius: 50%; border: none; 
+            cursor: pointer; font-weight: bold; display: inline-flex; 
+            justify-content: center; align-items: center; color: white;
+        }
+        .qty-btn:hover { opacity: 0.8; }
+        .qty-minus { background-color: var(--danger-color); }
+        .qty-plus { background-color: var(--success-color); }
+
+        /* Login */
+        #login-view { display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); }
+        .login-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+        .login-card h2 { margin-bottom: 1.5rem; text-align: center; color: var(--secondary-color); font-size: 1.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .form-control { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 1rem; }
+
+        /* Layout */
+        header { background-color: white; padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .user-info span { font-weight: bold; color: var(--primary-color); }
+        main { padding: 2rem; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        /* Pestañas */
+        .tabs { display: flex; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb; }
+        .tab-btn { padding: 12px 24px; cursor: pointer; background: none; border: none; font-size: 1rem; color: #666; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: bold; }
+
+        /* Panel Admin */
+        .admin-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; }
+        @media(max-width: 900px) { .admin-grid { grid-template-columns: 1fr; } }
+        .card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .card h3 { margin-bottom: 1rem; border-bottom: 2px solid var(--bg-color); padding-bottom: 0.5rem; }
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .product-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background: #fafafa; text-align: center; display: flex; flex-direction: column; }
+        .product-img { width: 100%; height: 150px; object-fit: cover; border-radius: 4px; margin-bottom: 0.5rem; background-color: #ddd; }
+        .sector-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; background-color: var(--accent-color); color: white; margin-bottom: 0.5rem; }
+        .stock-tag { font-size: 0.9rem; color: var(--text-color); }
+        .low-stock { color: var(--danger-color); font-weight: bold; }
+
+        /* Stats */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--primary-color); }
+        .stat-card h4 { color: #666; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .stat-card .value { font-size: 1.5rem; font-weight: bold; color: var(--text-color); }
+        .stat-card.success { border-left-color: var(--success-color); }
+
+        /* Tablas */
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 1rem; background: white; }
+        .history-table th, .history-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .history-table th { background-color: #f9fafb; font-weight: 600; }
+        .history-table tr:hover { background-color: #f9fafb; }
+
+        /* Panel Vendedor */
+        .pos-container { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; height: calc(100vh - 150px); }
+        @media(max-width: 900px) { .pos-container { grid-template-columns: 1fr; height: auto; } .cart-panel { position: static; height: auto; } }
+        .products-panel { overflow-y: auto; padding-right: 10px; }
+        .cart-panel { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 100%; }
+        .cart-items { flex-grow: 1; overflow-y: auto; margin: 1rem 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+        
+        .cart-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px dashed #eee; }
+        .cart-total { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); margin: 1rem 0; display: flex; justify-content: space-between; }
+        .change-display { background-color: var(--success-color); color: white; padding: 1rem; border-radius: 6px; text-align: center; font-size: 1.2rem; margin-top: 1rem; }
+
+        /* Modal General */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background-color: white; padding: 2rem; border-radius: 8px; width: 90%; max-width: 500px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .close-modal { float: right; cursor: pointer; font-size: 1.5rem; font-weight: bold; }
+
+        /* Toast */
+        #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 2000; left: 50%; bottom: 30px; transform: translateX(-50%); }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+    <div id="toast">Mensaje</div>
+
+    <!-- MODAL CIERRE CAJA -->
+    <div id="cash-close-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('cash-close-modal')">&times;</span>
+            <h2>📊 Cierre de Caja</h2>
+            <p style="color: #666; margin-bottom: 20px;">Resumen de ventas del día</p>
+            <div style="background: #f3f4f6; padding: 20px; border-radius: 8px;">
+                <h4>Total Recaudado Hoy</h4>
+                <div style="font-size: 3rem; font-weight: bold; color: var(--success-color); margin: 10px 0;" id="cash-close-total">bs 0.00</div>
+                <p id="cash-close-count">0 ventas realizadas</p>
+            </div>
+            <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">⚠️ Al aceptar, el historial de ventas de hoy se marcará como cerrado.</p>
+            <button class="btn btn-primary w-100 mt-2" onclick="confirmCashClose()">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR PRODUCTO -->
+    <div id="edit-product-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('edit-product-modal')">&times;</span>
+            <h2 style="color: var(--accent-color);">✏️ Editar Producto</h2>
+            <form id="edit-product-form" onsubmit="saveProductChanges(event)">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="edit-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Precio (bs)</label>
+                    <input type="number" id="edit-price" class="form-control" min="0" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Sector</label>
+                    <select id="edit-sector" class="form-control">
+                        <option value="1">Sector 1</option>
+                        <option value="2">Sector 2</option>
+                        <option value="3">Sector 3</option>
+                        <option value="4">Sector 4</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-danger w-100" onclick="closeModal('edit-product-modal')">Cancelar</button>
+                    <button type="submit" class="btn btn-warning w-100">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VISTA LOGIN -->
+    <section id="login-view">
+        <div class="login-card">
+            <h2>Mercado 🏪</h2>
+            <div class="form-group">
+                <label>Correo Electrónico</label>
+                <input type="email" id="username" class="form-control" placeholder="ejemplo@correo.com">
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" class="form-control" placeholder="Ingrese contraseña">
+            </div>
+            <button class="btn btn-primary w-100" onclick="handleLogin()">Ingresar</button>
+            <p class="text-center mt-2" style="font-size: 0.8rem; color: #666;">
+                (Admin: admin@mercado.com | Pass: admin123)
+            </p>
+        </div>
+    </section>
+
+    <!-- APP PRINCIPAL -->
+    <div id="main-app" class="hidden">
+        <header>
+            <h2>🏪 Mercado</h2>
+            <div class="user-info">
+                Hola, <span id="user-display">Usuario</span> | 
+                <button class="btn btn-danger" onclick="handleLogout()" style="padding: 5px 10px;">Salir</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- PANEL ADMINISTRADOR -->
+            <section id="admin-panel" class="hidden">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchAdminTab('inventory')">Inventario</button>
+                    <button class="tab-btn" onclick="switchAdminTab('reports')">Reportes</button>
+                    <button class="tab-btn" onclick="switchAdminTab('users')">Usuarios</button>
+                </div>
+
+                <!-- Tab Inventario -->
+                <div id="admin-inventory-view">
+                    <div class="admin-grid">
+                        <div class="card">
+                            <h3>Agregar Nuevo Insumo</h3>
+                            <form id="add-product-form" onsubmit="addProduct(event)">
+                                <div class="form-group"><label>Nombre</label><input type="text" id="prod-name" class="form-control" required></div>
+                                <div class="form-group"><label>Precio (bs)</label><input type="number" id="prod-price" class="form-control" min="0" required></div>
+                                <div class="form-group"><label>Stock</label><input type="number" id="prod-stock" class="form-control" min="0" required></div>
+                                <div class="form-group">
+                                    <label>Sector</label>
+                                    <select id="prod-sector" class="form-control">
+                                        <option value="1">Sector 1</option>
+                                        <option value="2">Sector 2</option>
+                                        <option value="3">Sector 3</option>
+                                        <option value="4">Sector 4</option>
+                                        <option value="Otro">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Imagen (Opcional)</label>
+                                    <input type="file" id="prod-image" class="form-control" accept="image/*">
+                                    <small style="color: #666; font-size: 0.8em;">Se redimensionará automáticamente.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Guardar Producto</button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3>Inventario Actual</h3>
+                                <span id="total-items-badge" class="sector-badge" style="background:#666">0 items</span>
+                            </div>
+                            <input type="text" id="search-inventory" class="form-control mt-2" placeholder="🔍 Buscar producto..." style="font-size: 1.1rem;" onkeyup="renderAdminInventory()">
+                            <div id="admin-inventory-list" class="inventory-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Reportes -->
+                <div id="admin-reports-view" class="hidden">
+                    <h3>📊 Reportes de Ventas</h3>
+                    <div class="stats-grid mt-2">
+                        <div class="stat-card"><h4>Ventas Hoy</h4><div class="value" id="stat-today">bs 0.00</div></div>
+                        <div class="stat-card success"><h4>Ventas Semana</h4><div class="value" id="stat-week">bs 0.00</div></div>
+                        <div class="stat-card success"><h4>Ventas Mes</h4><div class="value" id="stat-month">bs 0.00</div></div>
+                    </div>
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <h3>Registro Completo</h3>
+                            <div style="display:flex; gap:5px;">
+                                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="confirmClearReport('week')">🗑️ Borrar Semana</button>
+                                <button class="btn btn-danger" style="padding: 5px 10px; font-size: 0.8rem;" onclick="confirmClearReport('month')">🗑️ Borrar Mes</button>
+                            </div>
+                        </div>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <table class="history-table">
+                                <thead><tr><th>Fecha</th><th>Vendedor</th><th>Total</th><th>Estado</th><th>Detalle</th></tr></thead>
+                                <tbody id="full-sales-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Usuarios -->
+                <div id="admin-users-view" class="hidden">
+                    <div class="admin-grid">
+                        <div class="card">
+                            <h3>🔑 Mi Cuenta</h3>
+                            <div class="form-group"><label>Nueva Contraseña</label><input type="password" id="new-password-self" class="form-control" placeholder="Nueva contraseña"></div>
+                            <button class="btn btn-primary w-100" onclick="updateSelfPassword()">Actualizar mi Contraseña</button>
+                        </div>
+                        <div class="card">
+                            <h3>👥 Gestión de Usuarios (Firebase Auth)</h3>
+                            <form id="add-user-form" onsubmit="createUser(event)" style="display:flex; gap:10px; align-items:flex-end; margin-bottom: 1rem;">
+                                <div style="flex-grow:1"><label>Correo</label><input type="email" id="new-username" class="form-control" required></div>
+                                <div style="flex-grow:1"><label>Contraseña</label><input type="text" id="new-userpass" class="form-control" required></div>
+                                <div style="flex-grow:1"><label>Rol</label><select id="new-userrole" class="form-control"><option value="vendedor">Vendedor</option><option value="admin">Admin</option></select></div>
+                                <button type="submit" class="btn btn-success">Crear</button>
+                            </form>
+                            <p style="font-size:0.8rem; color: #666; margin-bottom:10px;">Al crear un usuario, se registrará en Firebase Authentication.</p>
+                            <table class="history-table"><thead><tr><th>Correo</th><th>Rol</th><th>Acción</th></tr></thead><tbody id="users-table-body"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PANEL VENDEDOR -->
+            <section id="seller-panel" class="hidden">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchSellerTab('pos')">Punto de Venta</button>
+                    <button class="tab-btn" onclick="switchSellerTab('history')">Historial</button>
+                </div>
+
+                <!-- Tab POS -->
+                <div id="seller-pos-view">
+                    <div class="pos-container">
+                        <div class="products-panel">
+                            <input type="text" id="seller-search" class="form-control mb-2" placeholder="🔍 ¿Qué estás buscando?" style="font-size: 1.2rem; padding: 15px;" onkeyup="renderSellerProducts()">
+                            
+                            <div style="margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button class="btn btn-primary" onclick="filterSellerProducts('all')">Todos</button>
+                                <button class="btn btn-primary" onclick="filterSellerProducts('1')">S1</button>
+                                <button class="btn btn-primary" onclick="filterSellerProducts('2')">S2</button>
+                                <button class="btn btn-primary" onclick="filterSellerProducts('3')">S3</button>
+                                <button class="btn btn-primary" onclick="filterSellerProducts('4')">S4</button>
+                            </div>
+                            <div id="seller-products-grid" class="inventory-grid"></div>
+                        </div>
+
+                        <div class="cart-panel">
+                            <h3>🛒 Carrito</h3>
+                            <div class="cart-items" id="cart-items-container"></div>
+                            <div class="cart-total"><span>Total:</span><span id="cart-total-amount">bs 0.00</span></div>
+                            <div class="form-group"><label>Efectivo Cliente:</label><input type="number" id="cash-given" class="form-control" placeholder="0.00" oninput="calculateChange()"></div>
+                            <div id="change-result" class="hidden"><div class="change-display">CAMBIO: <br><strong style="font-size:1.5rem" id="change-amount">bs 0.00</strong></div></div>
+                            <button class="btn btn-success mt-2 w-100" onclick="processSale()">✅ Confirmar Venta</button>
+                            <button class="btn btn-danger mt-2 w-100" onclick="clearCart()">🗑️ Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Historial -->
+                <div id="seller-history-view" class="hidden">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>📜 Historial de Ventas</h3>
+                        <button class="btn btn-success" onclick="openCashClose()">💰 Cierre de Caja</button>
+                    </div>
+                    <div class="card">
+                        <div style="overflow-x: auto;">
+                            <table class="history-table"><thead><tr><th>Hora</th><th>Productos</th><th>Total</th></tr></thead><tbody id="today-sales-table"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- LOGICA CON FIREBASE AUTH Y FIRESTORE -->
+    <script type="module">
+        // Importar funciones de Firebase SDK (Versión Modular)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            getDocs, 
+            addDoc, 
+            doc, 
+            getDoc, 
+            updateDoc, 
+            deleteDoc, 
+            query, 
+            where, 
+            orderBy,
+            setDoc
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            signOut, 
+            onAuthStateChanged,
+            updatePassword
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyAhaOIDhsA7CITgrj1mXYI7QRkePA3chOU",
+            authDomain: "mercado2-1b2e5.firebaseapp.com",
+            projectId: "mercado2-1b2e5",
+            storageBucket: "mercado2-1b2e5.firebasestorage.app",
+            messagingSenderId: "605958107584",
+            appId: "1:605958107584:web:d90548e52b3682129f1825"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // Variables Globales
+        let currentUser = null; // Objeto que combina Auth + Data de Firestore
+        let cart = [];
+        let cachedProducts = [];
+
+        // ---------------------------------------------------------
+        // INICIALIZACIÓN Y SEED DATA (Usuario Admin por defecto)
+        // ---------------------------------------------------------
+        
+        async function initializeSeedData() {
+            // 1. Crear Productos iniciales si no existen
+            const productsSnap = await getDocs(collection(db, "products"));
+            if (productsSnap.empty) {
+                console.log("Creando productos iniciales...");
+                const initialProducts = [
+                    { name: "Taladro Percutor", price: 450, stock: 10, sector: "1", image: "https://picsum.photos/seed/taladro/200/200.jpg" },
+                    { name: "Juego Destornilladores", price: 120, stock: 5, sector: "2", image: "https://picsum.photos/seed/dest/200/200.jpg" },
+                    { name: "Martillo Fibra", price: 85, stock: 0, sector: "3", image: "https://picsum.photos/seed/martillo/200/200.jpg" }
+                ];
+                for(const p of initialProducts) {
+                    await addDoc(collection(db, "products"), p);
+                }
+            }
+
+            // 2. Intentar crear el usuario Admin en Auth y Firestore
+            // Esto intentará crear admin@mercado.com. Si ya existe (lo cual es normal), fallará silenciosamente.
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, "admin@mercado.com", "admin123");
+                // Si se creó exitosamente, guardar su rol en Firestore
+                await setDoc(doc(db, "users", userCredential.user.uid), {
+                    email: "admin@mercado.com",
+                    role: "admin"
+                });
+                console.log("Admin inicial creado exitosamente.");
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    console.log("El admin ya existe. Continuando...");
+                } else {
+                    console.error("Error al inicializar admin:", error);
+                }
+            }
+        }
+
+        // ---------------------------------------------------------
+        // FUNCIONES DE AUTENTICACIÓN
+        // ---------------------------------------------------------
+
+        window.handleLogin = async function() {
+            const email = document.getElementById('username').value.toLowerCase().trim();
+            const password = document.getElementById('password').value;
+            
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                // El usuario se ha autenticado, ahora obtenemos sus datos de Firestore
+                const uid = userCredential.user.uid;
+                const userDoc = await getDoc(doc(db, "users", uid));
+                
+                if (userDoc.exists()) {
+                    currentUser = { id: uid, ...userDoc.data() };
+                    loadInterface();
+                } else {
+                    showToast("❌ Error: El usuario no tiene perfil en el sistema.");
+                    await signOut(auth);
+                }
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Credenciales incorrectas: " + error.message);
+            }
+        };
+
+        window.handleLogout = async function() {
+            await signOut(auth);
+            location.reload();
+        };
+
+        async function loadInterface() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('user-display').textContent = `${currentUser.email} (${currentUser.role})`;
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('admin-panel').classList.remove('hidden');
+                renderAdminInventory();
+                renderAdminStats();
+                renderUserManagement();
+            } else {
+                document.getElementById('seller-panel').classList.remove('hidden');
+                renderSellerProducts();
+                renderSellerHistory();
+            }
+        }
+
+        // ---------------------------------------------------------
+        // FUNCIONES AUXILIARES DE DATOS
+        // ---------------------------------------------------------
+
+        async function getDB() {
+            const q = query(collection(db, "products"));
+            const querySnapshot = await getDocs(q);
+            const products = [];
+            querySnapshot.forEach((doc) => {
+                products.push({ id: doc.id, ...doc.data() });
+            });
+            cachedProducts = products;
+            return products;
+        }
+
+        async function getSales() {
+            const q = query(collection(db, "sales"), orderBy("date", "desc"));
+            const querySnapshot = await getDocs(q);
+            const sales = [];
+            querySnapshot.forEach((doc) => {
+                sales.push({ id: doc.id, ...doc.data() });
+            });
+            return sales;
+        }
+
+        async function getUsers() {
+            const q = query(collection(db, "users"));
+            const querySnapshot = await getDocs(q);
+            const users = [];
+            querySnapshot.forEach((doc) => {
+                users.push({ id: doc.id, ...doc.data() });
+            });
+            return users;
+        }
+
+        // --- COMPRESOR DE IMAGEN ---
+        function processAndCompressImage(file, callback) {
+            if (!file) { callback(null); return; }
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(event) {
+                const img = new Image(); img.src = event.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                    const MAX = 400; let w = img.width, h = img.height;
+                    if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                    canvas.width = w; canvas.height = h; ctx.drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                }
+            }
+        }
+
+        // --- ADMIN: TABS ---
+        window.switchAdminTab = function(tab) {
+            document.querySelectorAll('#admin-panel .tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('admin-inventory-view').classList.add('hidden');
+            document.getElementById('admin-reports-view').classList.add('hidden');
+            document.getElementById('admin-users-view').classList.add('hidden');
+            if(tab === 'inventory') document.getElementById('admin-inventory-view').classList.remove('hidden');
+            else if (tab === 'reports') { document.getElementById('admin-reports-view').classList.remove('hidden'); renderAdminStats(); }
+            else if (tab === 'users') { document.getElementById('admin-users-view').classList.remove('hidden'); renderUserManagement(); }
+        }
+
+        // --- ADMIN: PRODUCTOS ---
+        window.addProduct = async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('prod-name').value;
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+            const sector = document.getElementById('prod-sector').value;
+            const fileInput = document.getElementById('prod-image');
+            const defaultImg = `https://picsum.photos/seed/${Date.now()}/200/200.jpg`;
+
+            const saveProduct = async (imgUrl) => {
+                try {
+                    await addDoc(collection(db, "products"), {
+                        name, price, stock, sector, image: imgUrl
+                    });
+                    showToast("✅ Producto agregado");
+                    document.getElementById('add-product-form').reset();
+                    renderAdminInventory();
+                } catch (err) {
+                    console.error(err);
+                    showToast("❌ Error al guardar");
+                }
+            };
+
+            if (fileInput.files[0]) {
+                processAndCompressImage(fileInput.files[0], (res) => saveProduct(res || defaultImg));
+            } else {
+                saveProduct(defaultImg);
+            }
+        }
+
+        window.deleteProduct = async function(id) {
+            if(confirm("¿Estás seguro de eliminar este producto?")) {
+                await deleteDoc(doc(db, "products", id));
+                renderAdminInventory();
+                showToast("🗑️ Producto eliminado");
+            }
+        }
+
+        window.openEditModal = async function(id) {
+            let product = cachedProducts.find(p => p.id === id);
+            if (!product) {
+                const docRef = doc(db, "products", id);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) product = { id: docSnap.id, ...docSnap.data() };
+                else return;
+            }
+            document.getElementById('edit-id').value = product.id;
+            document.getElementById('edit-name').value = product.name;
+            document.getElementById('edit-price').value = product.price;
+            document.getElementById('edit-sector').value = product.sector;
+            document.getElementById('edit-product-modal').style.display = 'flex';
+        }
+
+        window.saveProductChanges = async function(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const name = document.getElementById('edit-name').value;
+            const price = parseFloat(document.getElementById('edit-price').value);
+            const sector = document.getElementById('edit-sector').value;
+
+            try {
+                await updateDoc(doc(db, "products", id), { name, price, sector });
+                closeModal('edit-product-modal');
+                renderAdminInventory();
+                showToast("✅ Producto actualizado");
+            } catch (err) {
+                console.error(err);
+                showToast("❌ Error al actualizar");
+            }
+        }
+
+        window.adjustStock = async function(id, change) {
+            const docRef = doc(db, "products", id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const newStock = data.stock + change;
+                if (newStock < 0) {
+                    showToast("⚠️ El stock no puede ser negativo");
+                    return;
+                }
+                await updateDoc(docRef, { stock: newStock });
+                renderAdminInventory();
+            }
+        }
+
+        async function renderAdminInventory() {
+            if (cachedProducts.length === 0) cachedProducts = await getDB();
+            const container = document.getElementById('admin-inventory-list');
+            const search = document.getElementById('search-inventory').value.toLowerCase();
+            document.getElementById('total-items-badge').textContent = `${cachedProducts.length} items`;
+            container.innerHTML = '';
+            const filtered = cachedProducts.filter(p => p.name.toLowerCase().includes(search));
+            filtered.forEach(p => {
+                container.innerHTML += `
+                    <div class="product-card">
+                        <img src="${p.image}" class="product-img" onerror="this.src='https://via.placeholder.com/200?text=No+Img'">
+                        <span class="sector-badge">S${p.sector}</span>
+                        <h4>${p.name}</h4>
+                        <p style="font-size: 1.1rem; font-weight: bold; color: var(--primary-color);">bs ${parseFloat(p.price).toLocaleString()}</p>
+                        <div style="display:flex; justify-content:center; align-items:center; gap:8px; margin:10px 0;">
+                            <button class="qty-btn qty-minus" onclick="adjustStock('${p.id}', -1)">-</button>
+                            <span style="font-weight:bold; min-width:30px; text-align:center; font-size:1.1rem;" class="${p.stock == 0 ? 'text-danger' : ''}">${p.stock}</span>
+                            <button class="qty-btn qty-plus" onclick="adjustStock('${p.id}', 1)">+</button>
+                        </div>
+                        <div style="display: flex; gap: 5px; margin-top: auto;">
+                            <button class="btn btn-warning w-100" style="padding:5px; font-size:0.8rem;" onclick="openEditModal('${p.id}')">✏️ Editar</button>
+                            <button class="btn btn-danger w-100" style="padding:5px; font-size:0.8rem;" onclick="deleteProduct('${p.id}')">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // --- ADMIN: USUARIOS (CON FIREBASE AUTH) ---
+        async function renderUserManagement() {
+            const users = await getUsers();
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                const isSelf = u.id === currentUser.id;
+                // No permitimos borrar al propio usuario ni al último admin
+                const adminCount = users.filter(x => x.role === 'admin').length;
+                const canDelete = !isSelf && !(u.role === 'admin' && adminCount <= 1);
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${u.email} ${isSelf ? '(Tú)' : ''}</td>
+                        <td><span class="sector-badge" style="background:${u.role==='admin'?'var(--primary-color)':'var(--accent-color)'}">${u.role}</span></td>
+                        <td>${canDelete ? `<button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem;" onclick="deleteUser('${u.id}', '${u.email}')">Eliminar</button>` : ''}</td>
+                    </tr>`;
+            });
+        }
+
+        window.createUser = async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('new-username').value.toLowerCase().trim();
+            const pass = document.getElementById('new-userpass').value;
+            const role = document.getElementById('new-userrole').value;
+            
+            try {
+                // 1. Crear usuario en Firebase Authentication
+                const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                const uid = userCredential.user.uid;
+
+                // 2. Crear documento en Firestore con el Rol
+                await setDoc(doc(db, "users", uid), {
+                    email: email,
+                    role: role
+                });
+
+                document.getElementById('add-user-form').reset();
+                renderUserManagement();
+                showToast("✅ Usuario creado en Firebase");
+            } catch (error) {
+                console.error(error);
+                showToast("❌ Error creando usuario: " + error.message);
+            }
+        }
+
+        // Eliminar usuario requiere Admin SDK en Backend usualmente. 
+        // En Cliente, solo eliminaremos el documento de Firestore para "desactivar" el acceso a roles,
+        // pero el usuario seguirá existiendo en Auth (aunque no podrá entrar si validamos el documento).
+        // Para eliminar realmente de Auth en frontend se requiere re-autenticación y es complejo.
+        window.deleteUser = async function(id, email) {
+            if(!confirm(`¿Eliminar perfil de ${email}? (El acceso se bloqueará)`)) return;
+            
+            try {
+                await deleteDoc(doc(db, "users", id));
+                renderUserManagement();
+                showToast("🗑️ Perfil eliminado del sistema");
+            } catch(err) {
+                showToast("❌ Error al eliminar");
+            }
+        }
+
+        window.updateSelfPassword = async function() {
+            const newPass = document.getElementById('new-password-self').value;
+            if(newPass.length < 6) return showToast("⚠️ La contraseña debe tener al menos 6 caracteres");
+            
+            try {
+                const user = auth.currentUser;
+                await updatePassword(user, newPass);
+                document.getElementById('new-password-self').value = ''; 
+                showToast("✅ Contraseña actualizada en Firebase");
+            } catch(error) {
+                showToast("❌ Error: " + error.message);
+            }
+        }
+
+        // --- ADMIN: REPORTES ---
+        window.confirmClearReport = async function(type) {
+            let msg = type === 'week' ? "¿Eliminar todas las ventas de los últimos 7 días?" : "¿Eliminar todas las ventas de los últimos 30 días?";
+            if (confirm(msg)) await clearReport(type);
+        }
+
+        async function clearReport(type) {
+            const sales = await getSales();
+            const now = new Date();
+            const cutoffDate = new Date(now);
+            if (type === 'week') cutoffDate.setDate(now.getDate() - 7);
+            else if (type === 'month') cutoffDate.setDate(now.getDate() - 30);
+
+            const toDelete = sales.filter(s => {
+                const saleDate = new Date(s.date);
+                return saleDate < cutoffDate;
+            });
+
+            for(const s of toDelete) {
+                await deleteDoc(doc(db, "sales", s.id));
+            }
+            renderAdminStats();
+            showToast(`🗑️ Reporte antiguo eliminado.`);
+        }
+
+        async function renderAdminStats() {
+            const sales = await getSales();
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const weekAgo = new Date(today); weekAgo.setDate(today.getDate() - 7);
+            const monthAgo = new Date(today); monthAgo.setDate(today.getDate() - 30);
+            let sumToday = 0, sumWeek = 0, sumMonth = 0;
+            const tableBody = document.getElementById('full-sales-table'); tableBody.innerHTML = '';
+
+            sales.forEach(sale => {
+                const saleDate = new Date(sale.date);
+                if (saleDate >= today) sumToday += sale.total;
+                if (saleDate >= weekAgo) sumWeek += sale.total;
+                if (saleDate >= monthAgo) sumMonth += sale.total;
+                const itemsStr = sale.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                const status = sale.cleared ? '<span style="color:gray; font-size:0.8em">(Cerrado)</span>' : '<span style="color:green; font-size:0.8em">(Activo)</span>';
+                tableBody.innerHTML += `<tr><td>${new Date(sale.date).toLocaleString()}</td><td>${sale.sellerEmail || sale.seller}</td><td style="font-weight:bold; color:var(--success-color)">bs ${sale.total.toLocaleString()}</td><td>${status}</td><td><small>${itemsStr}</small></td></tr>`;
+            });
+            document.getElementById('stat-today').textContent = `bs ${sumToday.toLocaleString()}`;
+            document.getElementById('stat-week').textContent = `bs ${sumWeek.toLocaleString()}`;
+            document.getElementById('stat-month').textContent = `bs ${sumMonth.toLocaleString()}`;
+        }
+
+        // --- VENDEDOR ---
+        window.switchSellerTab = function(tab) {
+            document.querySelectorAll('#seller-panel .tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            if(tab === 'pos') { document.getElementById('seller-pos-view').classList.remove('hidden'); document.getElementById('seller-history-view').classList.add('hidden'); }
+            else { document.getElementById('seller-pos-view').classList.add('hidden'); document.getElementById('seller-history-view').classList.remove('hidden'); renderSellerHistory(); }
+        }
+
+        let currentFilter = 'all';
+        window.filterSellerProducts = function(sector) { currentFilter = sector; renderSellerProducts(); }
+
+        async function renderSellerProducts() {
+            if (cachedProducts.length === 0) cachedProducts = await getDB();
+            const container = document.getElementById('seller-products-grid');
+            const search = document.getElementById('seller-search').value.toLowerCase();
+            container.innerHTML = '';
+            
+            const filtered = cachedProducts.filter(p => p.name.toLowerCase().includes(search) && (currentFilter === 'all' || p.sector === currentFilter) && p.stock > 0);
+            if(filtered.length === 0) { container.innerHTML = '<p class="text-center w-100">Sin productos disponibles</p>'; return; }
+            filtered.forEach(p => {
+                container.innerHTML += `
+                    <div class="product-card" onclick="addToCart('${p.id}')" style="cursor:pointer;">
+                        <img src="${p.image}" class="product-img" onerror="this.src='https://via.placeholder.com/200?text=No+Img'">
+                        <span class="sector-badge">S${p.sector}</span>
+                        <h4>${p.name}</h4>
+                        <p class="stock-tag">Disp: ${p.stock}</p>
+                        <p style="color:var(--primary-color); font-weight:bold;">bs ${parseFloat(p.price).toLocaleString()}</p>
+                        <button class="btn btn-primary mt-2">Agregar</button>
+                    </div>`;
+            });
+        }
+
+        window.addToCart = async function(id) {
+            if (cachedProducts.length === 0) cachedProducts = await getDB();
+            const product = cachedProducts.find(p => p.id === id);
+            const inCart = cart.find(i => i.id === id);
+            const currentQty = inCart ? inCart.qty : 0;
+            if (currentQty >= product.stock) { showToast("⚠️ Stock máximo"); return; }
+            if(inCart) inCart.qty++;
+            else cart.push({...product, qty: 1});
+            renderCart();
+        }
+
+        window.changeQty = async function(id, change) {
+            const item = cart.find(i => i.id === id); if (!item) return;
+            if (cachedProducts.length === 0) cachedProducts = await getDB();
+            const product = cachedProducts.find(p => p.id === id);
+            
+            item.qty += change;
+            if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
+            else if (item.qty > product.stock) { item.qty = product.stock; showToast("⚠️ Sin más stock"); }
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items-container'); container.innerHTML = ''; let total = 0;
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center" style="margin-top:20px; color:#999">Carrito vacío</p>';
+                document.getElementById('cart-total-amount').textContent = 'bs 0.00';
+                document.getElementById('change-result').classList.add('hidden');
+                return;
+            }
+            cart.forEach(item => {
+                total += item.price * item.qty;
+                container.innerHTML += `
+                    <div class="cart-item">
+                        <div style="flex-grow:1"><strong>${item.name}</strong><div style="font-size:0.9rem; color:#666">bs ${item.price.toLocaleString()} c/u</div></div>
+                        <div class="qty-control"><button class="qty-btn" style="background:#ddd; color:#333;" onclick="changeQty('${item.id}', -1)">-</button><span style="font-weight:bold; width:20px; text-align:center;">${item.qty}</span><button class="qty-btn" style="background:#ddd; color:#333;" onclick="changeQty('${item.id}', 1)">+</button></div>
+                        <div style="font-weight:bold; margin-left:10px; min-width:60px; text-align:right">bs ${(item.price * item.qty).toLocaleString()}</div>
+                    </div>`;
+            });
+            document.getElementById('cart-total-amount').textContent = `bs ${total.toLocaleString()}`;
+            calculateChange();
+        }
+
+        window.calculateChange = function() {
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const given = parseFloat(document.getElementById('cash-given').value) || 0;
+            const resultDiv = document.getElementById('change-result');
+            if (given > 0) {
+                const change = given - total;
+                document.getElementById('change-amount').textContent = `bs ${change.toLocaleString()}`;
+                resultDiv.classList.remove('hidden');
+                resultDiv.querySelector('.change-display').style.backgroundColor = change >= 0 ? 'var(--success-color)' : 'var(--danger-color)';
+            } else { resultDiv.classList.add('hidden'); }
+        }
+
+        window.processSale = async function() {
+            if (cart.length === 0) return showToast("⚠️ Carrito vacío");
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            const given = parseFloat(document.getElementById('cash-given').value) || 0;
+            if (given < total) return showToast("❌ Dinero insuficiente");
+            
+            // 1. Guardar Venta (Guardamos el email del vendedor actual)
+            await addDoc(collection(db, "sales"), {
+                date: new Date().toISOString(),
+                sellerEmail: currentUser.email,
+                seller: currentUser.email.split('@')[0], // Fallback para legibilidad
+                total: total,
+                items: [...cart],
+                cleared: false
+            });
+
+            // 2. Actualizar Stock
+            for(const cItem of cart) {
+                const docRef = doc(db, "products", cItem.id);
+                const docSnap = await getDoc(docRef);
+                if(docSnap.exists()) {
+                    const currentStock = docSnap.data().stock;
+                    await updateDoc(docRef, { stock: currentStock - cItem.qty });
+                }
+            }
+
+            showToast("✅ Venta Exitosa");
+            clearCart();
+            cachedProducts = [];
+            renderSellerProducts();
+        }
+
+        window.clearCart = function() { cart = []; renderCart(); document.getElementById('cash-given').value = ''; }
+
+        async function renderSellerHistory() {
+            const sales = await getSales();
+            const today = new Date().toDateString();
+            const container = document.getElementById('today-sales-table');
+            container.innerHTML = '';
+            const todaySales = sales.filter(s => new Date(s.date).toDateString() === today && s.sellerEmail === currentUser.email && !s.cleared);
+            
+            if (todaySales.length === 0) { container.innerHTML = '<tr><td colspan="3" class="text-center">No hay ventas hoy</td></tr>'; return; }
+            
+            let dailyTotal = 0;
+            todaySales.forEach(sale => {
+                dailyTotal += sale.total;
+                const itemsStr = sale.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                const time = new Date(sale.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                container.innerHTML += `<tr><td>${time}</td><td>${itemsStr}</td><td style="font-weight:bold">bs ${sale.total.toLocaleString()}</td></tr>`;
+            });
+            container.innerHTML += `<tr style="background:#f0fdf4; font-weight:bold; border-top:2px solid var(--success-color);"><td colspan="2" class="text-right">Total del Día:</td><td>bs ${dailyTotal.toLocaleString()}</td></tr>`;
+        }
+
+        window.openCashClose = async function() {
+            const sales = await getSales();
+            const today = new Date().toDateString();
+            const todaySales = sales.filter(s => new Date(s.date).toDateString() === today && s.sellerEmail === currentUser.email && !s.cleared);
+            
+            const total = todaySales.reduce((sum, s) => sum + s.total, 0);
+            const count = todaySales.length;
+            document.getElementById('cash-close-total').textContent = `bs ${total.toLocaleString()}`;
+            document.getElementById('cash-close-count').textContent = `${count} ventas realizadas hoy`;
+            document.getElementById('cash-close-modal').style.display = 'flex';
+        }
+
+        window.closeModal = function(modalId) { document.getElementById(modalId).style.display = "none"; }
+
+        window.confirmCashClose = async function() {
+            const sales = await getSales();
+            const todayString = new Date().toDateString();
+            const currentUserEmail = currentUser.email;
+            
+            const updates = sales.filter(s => 
+                new Date(s.date).toDateString() === todayString && 
+                s.sellerEmail === currentUserEmail && 
+                !s.cleared
+            );
+
+            for(const s of updates) {
+                await updateDoc(doc(db, "sales", s.id), { cleared: true });
+            }
+
+            closeModal('cash-close-modal');
+            renderSellerHistory();
+            showToast("🧾 Cierre realizado.");
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.textContent = msg; t.className = "show";
+            setTimeout(() => t.className = t.className.replace("show", ""), 3000);
+        }
+
+        // Inicializar sistema
+        initializeSeedData();
+
+        // Cerrar modales al hacer clic fuera
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
+            }
+        }
+    </script>
+</body> 
+</html>
